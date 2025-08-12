@@ -11,6 +11,11 @@ on:
         required: true
         default: 'v0.1.0'
 
+permissions:
+  contents: write
+  actions: read
+  checks: write
+
 env:
   CARGO_TERM_COLOR: always
 
@@ -122,7 +127,7 @@ jobs:
         fi
 
     - name: Create Release
-      uses: softprops/action-gh-release@v1
+      uses: softprops/action-gh-release@v2
       with:
         tag_name: ${{ steps.get_version.outputs.version }}
         name: VTracer Go Binding ${{ steps.get_version.outputs.version }}
@@ -155,5 +160,7 @@ jobs:
         files: release-assets/*
         draft: false
         prerelease: false
+        fail_on_unmatched_files: true
+        generate_release_notes: false
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ github.token }}
