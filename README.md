@@ -57,7 +57,7 @@ func main() {
 go run examples/simple/simple_convert.go input.jpg output.svg
 ```
 
-## 📁 示例程序
+## 示例程序
 
 本项目提供了一个简单的示例程序，位于 `examples/simple/` 目录下，展示了最核心的文件转换功能：
 
