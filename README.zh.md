@@ -115,3 +115,11 @@ func ConvertBytes(pixels []byte, width, height int, config *Config) (string, err
 ## 许可证
 
 MIT
+
+## 贡献
+
+欢迎任何形式的贡献，如修复错误、添加新功能、改进文档等。
+
+## 致谢
+
+- [VTracer](https://github.com/visioncortex/vtracer)

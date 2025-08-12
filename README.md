@@ -110,145 +110,14 @@ func ConvertImage(img image.Image, config *Config) (string, error)
 func ConvertBytes(pixels []byte, width, height int, config *Config) (string, error)
 ```
 
-## Examples
-
-### Convert File with Custom Settings
-
-```go
-package main
-
-import (
-    "log"
-    "github.com/yclw/go-vtracer"
-)
-
-func main() {
-    config := vtracer.DefaultConfig()
-    
-    // High quality settings
-    config.ColorPrecision = 8      // Maximum color precision
-    config.FilterSpeckle = 4       // Remove small noise
-    config.Mode = vtracer.PathModeSpline  // Use spline curves
-    config.CornerThreshold = 60    // Detect corners at 60 degrees
-    config.LengthThreshold = 4.0   // Minimum curve length
-    
-    err := vtracer.ConvertFile("input.png", "output.svg", config)
-    if err != nil {
-        log.Fatal("Conversion failed:", err)
-    }
-    
-    log.Println("Successfully converted to SVG!")
-}
-```
-
-### Convert Go Image
-
-```go
-package main
-
-import (
-    "image"
-    "image/jpeg"
-    "log"
-    "os"
-    "github.com/yclw/go-vtracer"
-)
-
-func main() {
-    // Open and decode image
-    file, err := os.Open("input.jpg")
-    if err != nil {
-        log.Fatal(err)
-    }
-    defer file.Close()
-    
-    img, err := jpeg.Decode(file)
-    if err != nil {
-        log.Fatal(err)
-    }
-    
-    // Convert to SVG
-    svgContent, err := vtracer.ConvertImage(img, nil)
-    if err != nil {
-        log.Fatal(err)
-    }
-    
-    // Save SVG
-    err = os.WriteFile("output.svg", []byte(svgContent), 0644)
-    if err != nil {
-        log.Fatal(err)
-    }
-    
-    log.Println("Image converted and saved as SVG!")
-}
-```
-
-### Binary Image Processing
-
-```go
-config := vtracer.DefaultConfig()
-config.ColorMode = vtracer.ColorModeBinary  // Binary mode for logos/line art
-config.FilterSpeckle = 16                   // Remove larger noise spots
-
-err := vtracer.ConvertFile("logo.png", "logo.svg", config)
-if err != nil {
-    log.Fatal(err)
-}
-```
-
-## Platform Support
-
-The library includes pre-built native libraries for:
-
-- **Linux**: x86_64, aarch64
-- **macOS**: x86_64 (Intel), arm64 (Apple Silicon)  
-- **Windows**: x86_64
-
-The appropriate library is automatically selected based on your platform.
-
-## Performance Tips
-
-1. **Use Binary Mode**: For logos and line art, use `ColorModeBinary` for better performance
-2. **Adjust Color Precision**: Lower values (4-6) are faster, higher values (7-8) are more accurate
-3. **Filter Speckles**: Use `FilterSpeckle` to remove noise and reduce output size
-4. **Choose Path Mode**: `PathModePolygon` is fastest, `PathModeSpline` gives smoothest results
-
-## Error Handling
-
-The library provides detailed error messages for common issues:
-
-```go
-err := vtracer.ConvertFile("input.jpg", "output.svg", nil)
-if err != nil {
-    log.Printf("Conversion failed: %v", err)
-    // Handle specific error cases
-}
-```
-
-## Building from Source
-
-If you need to build the native library from source:
-
-```bash
-# Install Rust
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-
-# Build the library
-cargo build --release
-
-# Copy to lib directory
-cp target/release/libvtracer_go.* lib/
-```
-
 ## License
 
 MIT
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Contributions of all kinds are welcome, such as bug fixes, new features, documentation improvements, etc.
 
 ## Credits
 
-- [VTracer](https://github.com/visioncortex/vtracer) - The core vectorization library
-- [VisionCortex](https://visioncortex.org/) - Computer vision research group
+- [VTracer](https://github.com/visioncortex/vtracer)
