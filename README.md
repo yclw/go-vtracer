@@ -2,7 +2,7 @@
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/yclw/go-vtracer.svg)](https://pkg.go.dev/github.com/yclw/go-vtracer)
 [![Go Report Card](https://goreportcard.com/badge/github.com/yclw/go-vtracer)](https://goreportcard.com/report/github.com/yclw/go-vtracer)
-[![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue.svg)](LICENSE)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 这是 [VTracer](https://github.com/visioncortex/vtracer) 的 **Go 语言绑定**，让您能在 Go 程序中轻松使用 VTracer 进行高质量的图像矢量化处理。
 
