@@ -1,0 +1,17 @@
+target
+Cargo.lock
+*.sublime*
+.vscode
+
+# Added by cargo
+
+/target
+
+# Go 构建文件
+bin/
+
+# 演示生成的文件
+demo_*.svg
+demo_*.png
+test_*.svg
+test_*.png

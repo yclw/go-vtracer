@@ -1,0 +1,159 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag (e.g., v0.1.0)'
+        required: true
+        default: 'v0.1.0'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: Build for ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+            name: linux-x86_64
+            file_name: libvtracer_go.so
+          - target: aarch64-unknown-linux-gnu  
+            os: ubuntu-latest
+            name: linux-aarch64
+            file_name: libvtracer_go.so
+          - target: x86_64-apple-darwin
+            os: macos-latest
+            name: macos-x86_64
+            file_name: libvtracer_go.dylib
+          - target: aarch64-apple-darwin
+            os: macos-latest
+            name: macos-aarch64
+            file_name: libvtracer_go.dylib
+          - target: x86_64-pc-windows-gnu
+            os: windows-latest
+            name: windows-x86_64
+            file_name: vtracer_go.dll
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        targets: ${{ matrix.target }}
+
+    - name: Install cross-compilation tools (Linux)
+      if: matrix.os == 'ubuntu-latest' && matrix.target == 'aarch64-unknown-linux-gnu'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y gcc-aarch64-linux-gnu
+
+    - name: Set up cross-compilation environment (Linux aarch64)
+      if: matrix.target == 'aarch64-unknown-linux-gnu'
+      run: |
+        echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
+        echo "CC_aarch64_unknown_linux_gnu=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
+        echo "AR_aarch64_unknown_linux_gnu=aarch64-linux-gnu-ar" >> $GITHUB_ENV
+
+    - name: Build
+      run: cargo build --release --target ${{ matrix.target }}
+
+    - name: Prepare artifact
+      shell: bash
+      run: |
+        mkdir -p dist
+        if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+          cp target/${{ matrix.target }}/release/${{ matrix.file_name }} dist/
+        else
+          cp target/${{ matrix.target }}/release/${{ matrix.file_name }} dist/
+        fi
+        
+    - name: Create ZIP archive
+      shell: bash
+      run: |
+        cd dist
+        if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+          7z a ../vtracer-${{ matrix.target }}.zip ${{ matrix.file_name }}
+        else
+          zip ../vtracer-${{ matrix.target }}.zip ${{ matrix.file_name }}
+        fi
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: vtracer-${{ matrix.target }}
+        path: vtracer-${{ matrix.target }}.zip
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: artifacts
+
+    - name: Prepare release assets
+      run: |
+        mkdir -p release-assets
+        find artifacts -name "*.zip" -exec cp {} release-assets/ \;
+        ls -la release-assets/
+
+    - name: Get version
+      id: get_version
+      run: |
+        if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+          echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+        else
+          echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: ${{ steps.get_version.outputs.version }}
+        name: VTracer Go Binding ${{ steps.get_version.outputs.version }}
+        body: |
+          ## VTracer Go 绑定 ${{ steps.get_version.outputs.version }}
+          
+          ### 📦 预编译动态库
+          
+          支持的平台：
+          - ✅ Linux x86_64
+          - ✅ Linux aarch64 (ARM64)
+          - ✅ macOS x86_64 (Intel)
+          - ✅ macOS aarch64 (Apple Silicon)
+          - ✅ Windows x86_64
+          
+          ### 🚀 使用方法
+          
+          ```bash
+          go get github.com/yclw/go-vtracer
+          go generate github.com/yclw/go-vtracer
+          ```
+          
+          动态库将自动下载到 `lib/` 目录。
+          
+          ### 📋 更新内容
+          
+          - 支持所有主要平台的预编译动态库
+          - 自动安装和配置
+          - 修复兼容性问题
+        files: release-assets/*
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
