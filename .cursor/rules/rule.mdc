@@ -1,5 +1,0 @@
----
-alwaysApply: true
----
-
-我希望将写一个golang的vtracer包，使golang程序能更加方便的使用vtracer来处理图片

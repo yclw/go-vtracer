@@ -1,11 +1,11 @@
-//go:generate go run cmd/install/install.go
-
 package vtracer
 
 /*
-#cgo linux LDFLAGS: -L./lib -lvtracer_go -Wl,-rpath,./lib
-#cgo darwin LDFLAGS: -L./lib -lvtracer_go -Wl,-rpath,./lib
-#cgo windows LDFLAGS: -L./lib -lvtracer_go
+#cgo linux,amd64 LDFLAGS: ${SRCDIR}/lib/libvtracer_go_linux_amd64.so -Wl,-rpath,${SRCDIR}/lib
+#cgo linux,arm64 LDFLAGS: ${SRCDIR}/lib/libvtracer_go_linux_arm64.so -Wl,-rpath,${SRCDIR}/lib
+#cgo darwin,amd64 LDFLAGS: ${SRCDIR}/lib/libvtracer_go_darwin_amd64.dylib -Wl,-rpath,${SRCDIR}/lib
+#cgo darwin,arm64 LDFLAGS: ${SRCDIR}/lib/libvtracer_go_darwin_arm64.dylib -Wl,-rpath,${SRCDIR}/lib
+#cgo windows,amd64 LDFLAGS: ${SRCDIR}/lib/vtracer_go_windows_amd64.dll
 #include <stdlib.h>
 
 typedef struct {
@@ -29,53 +29,71 @@ VtracerConfig vtracer_default_config();
 */
 import "C"
 import (
-	"errors"
+	"fmt"
 	"image"
-	"image/color"
 	"unsafe"
 )
 
-// ColorMode 表示颜色模式
+// ColorMode represents the color processing mode
 type ColorMode uint8
 
 const (
-	ColorModeColor  ColorMode = 0
-	ColorModeBinary ColorMode = 1
+	ColorModeColor  ColorMode = 0 // Color mode
+	ColorModeBinary ColorMode = 1 // Binary mode
 )
 
-// Hierarchical 表示层次结构模式
+// Hierarchical represents the hierarchical processing mode
 type Hierarchical uint8
 
 const (
-	HierarchicalStacked Hierarchical = 0
-	HierarchicalCutout  Hierarchical = 1
+	HierarchicalStacked Hierarchical = 0 // Stacked mode
+	HierarchicalCutout  Hierarchical = 1 // Cutout mode
 )
 
-// PathMode 表示路径模式
+// PathMode represents the path fitting mode
 type PathMode uint8
 
 const (
-	PathModeNone    PathMode = 0
-	PathModePolygon PathMode = 1
-	PathModeSpline  PathMode = 2
+	PathModeNone    PathMode = 0 // Pixel mode
+	PathModePolygon PathMode = 1 // Polygon mode
+	PathModeSpline  PathMode = 2 // Spline mode
 )
 
-// Config 包含 vtracer 的配置选项
-type Config struct {
-	ColorMode       ColorMode    // 颜色模式：彩色或二值
-	Hierarchical    Hierarchical // 层次结构：堆叠或裁剪
-	FilterSpeckle   int          // 过滤斑点大小
-	ColorPrecision  int          // 颜色精度 (1-8)
-	LayerDifference int          // 图层差异 (0-255)
-	Mode            PathMode     // 路径拟合模式
-	CornerThreshold int          // 角度阈值 (0-180度)
-	LengthThreshold float64      // 长度阈值 (3.5-10.0)
-	MaxIterations   int          // 最大迭代次数
-	SpliceThreshold int          // 拼接阈值 (0-180度)
-	PathPrecision   int          // 路径精度
+// Error code mapping table
+var errorMessages = map[int]string{
+	-1: "invalid input parameters",
+	-2: "invalid input path or pixel data length error",
+	-3: "invalid output path or string conversion failed",
+	-4: "conversion failed",
 }
 
-// DefaultConfig 返回默认配置
+// codeToError converts C function return codes to Go errors
+func codeToError(code int) error {
+	if code == 0 {
+		return nil
+	}
+	if msg, exists := errorMessages[code]; exists {
+		return fmt.Errorf("vtracer: %s (错误码: %d)", msg, code)
+	}
+	return fmt.Errorf("vtracer: 未知错误 (错误码: %d)", code)
+}
+
+// Config contains vtracer configuration options
+type Config struct {
+	ColorMode       ColorMode    // Color mode: color or binary
+	Hierarchical    Hierarchical // Hierarchical structure: stacked or cutout
+	FilterSpeckle   int          // Filter speckle size
+	ColorPrecision  int          // Color precision (1-8)
+	LayerDifference int          // Layer difference (0-255)
+	Mode            PathMode     // Path fitting mode
+	CornerThreshold int          // Corner threshold (0-180 degrees)
+	LengthThreshold float64      // Length threshold (3.5-10.0)
+	MaxIterations   int          // Maximum iterations
+	SpliceThreshold int          // Splice threshold (0-180 degrees)
+	PathPrecision   int          // Path precision
+}
+
+// DefaultConfig returns the default configuration
 func DefaultConfig() *Config {
 	cConfig := C.vtracer_default_config()
 	return &Config{
@@ -93,7 +111,7 @@ func DefaultConfig() *Config {
 	}
 }
 
-// toCConfig 将 Go 配置转换为 C 配置
+// toCConfig converts Go configuration to C configuration
 func (c *Config) toCConfig() C.VtracerConfig {
 	return C.VtracerConfig{
 		color_mode:       C.uchar(c.ColorMode),
@@ -110,7 +128,7 @@ func (c *Config) toCConfig() C.VtracerConfig {
 	}
 }
 
-// ConvertFile 将图像文件转换为 SVG 文件
+// ConvertFile converts an image file to SVG file
 func ConvertFile(inputPath, outputPath string, config *Config) error {
 	if config == nil {
 		config = DefaultConfig()
@@ -124,23 +142,10 @@ func ConvertFile(inputPath, outputPath string, config *Config) error {
 	cConfig := config.toCConfig()
 	result := C.vtracer_convert_file(cInputPath, cOutputPath, &cConfig)
 
-	switch result {
-	case 0:
-		return nil
-	case -1:
-		return errors.New("无效的输入参数")
-	case -2:
-		return errors.New("无效的输入路径")
-	case -3:
-		return errors.New("无效的输出路径")
-	case -4:
-		return errors.New("转换失败")
-	default:
-		return errors.New("未知错误")
-	}
+	return codeToError(int(result))
 }
 
-// ConvertImage 将 Go image.Image 转换为 SVG 字符串
+// ConvertImage converts a Go image.Image to SVG string
 func ConvertImage(img image.Image, config *Config) (string, error) {
 	if config == nil {
 		config = DefaultConfig()
@@ -150,7 +155,7 @@ func ConvertImage(img image.Image, config *Config) (string, error) {
 	width := bounds.Dx()
 	height := bounds.Dy()
 
-	// 转换为 RGBA 字节数组
+	// Convert to RGBA byte array
 	pixels := make([]byte, width*height*4)
 	idx := 0
 	for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
@@ -167,14 +172,14 @@ func ConvertImage(img image.Image, config *Config) (string, error) {
 	return ConvertBytes(pixels, width, height, config)
 }
 
-// ConvertBytes 将 RGBA 字节数组转换为 SVG 字符串
+// ConvertBytes converts RGBA byte array to SVG string
 func ConvertBytes(pixels []byte, width, height int, config *Config) (string, error) {
 	if config == nil {
 		config = DefaultConfig()
 	}
 
 	if len(pixels) != width*height*4 {
-		return "", errors.New("像素数据长度不匹配")
+		return "", fmt.Errorf("vtracer: pixel data length mismatch, expected %d, got %d", width*height*4, len(pixels))
 	}
 
 	cConfig := config.toCConfig()
@@ -189,67 +194,10 @@ func ConvertBytes(pixels []byte, width, height int, config *Config) (string, err
 		&output,
 	)
 
-	if result != 0 {
-		switch result {
-		case -1:
-			return "", errors.New("无效的输入参数")
-		case -2:
-			return "", errors.New("像素数据长度错误")
-		case -3:
-			return "", errors.New("字符串转换失败")
-		case -4:
-			return "", errors.New("图像转换失败")
-		default:
-			return "", errors.New("未知错误")
-		}
+	if err := codeToError(int(result)); err != nil {
+		return "", err
 	}
 
 	defer C.vtracer_free_string(output)
 	return C.GoString(output), nil
-}
-
-// Preset 预设配置
-type Preset int
-
-const (
-	PresetBW     Preset = iota // 黑白模式
-	PresetPoster               // 海报模式
-	PresetPhoto                // 照片模式
-)
-
-// NewConfigFromPreset 根据预设创建配置
-func NewConfigFromPreset(preset Preset) *Config {
-	config := DefaultConfig()
-
-	switch preset {
-	case PresetBW:
-		config.ColorMode = ColorModeBinary
-		config.FilterSpeckle = 4
-		config.ColorPrecision = 6
-		config.LayerDifference = 16
-	case PresetPoster:
-		config.ColorMode = ColorModeColor
-		config.FilterSpeckle = 4
-		config.ColorPrecision = 8
-		config.LayerDifference = 16
-	case PresetPhoto:
-		config.ColorMode = ColorModeColor
-		config.FilterSpeckle = 10
-		config.ColorPrecision = 8
-		config.LayerDifference = 48
-		config.CornerThreshold = 180
-	}
-
-	return config
-}
-
-// CreateSolidColorImage 创建纯色图像用于测试
-func CreateSolidColorImage(width, height int, c color.Color) image.Image {
-	img := image.NewRGBA(image.Rect(0, 0, width, height))
-	for y := 0; y < height; y++ {
-		for x := 0; x < width; x++ {
-			img.Set(x, y, c)
-		}
-	}
-	return img
 }

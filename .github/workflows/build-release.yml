@@ -132,31 +132,31 @@ jobs:
         tag_name: ${{ steps.get_version.outputs.version }}
         name: VTracer Go Binding ${{ steps.get_version.outputs.version }}
         body: |
-          ## VTracer Go 绑定 ${{ steps.get_version.outputs.version }}
+          ## VTracer Go Binding ${{ steps.get_version.outputs.version }}
           
-          ### 📦 预编译动态库
+          ### Precompiled Dynamic Libraries
           
-          支持的平台：
-          - ✅ Linux x86_64
-          - ✅ Linux aarch64 (ARM64)
-          - ✅ macOS x86_64 (Intel)
-          - ✅ macOS aarch64 (Apple Silicon)
-          - ✅ Windows x86_64
+          Supported platforms:
+          - Linux x86_64
+          - Linux aarch64 (ARM64)
+          - macOS x86_64 (Intel)
+          - macOS aarch64 (Apple Silicon)
+          - Windows x86_64
           
-          ### 🚀 使用方法
+          ### Usage
           
           ```bash
           go get github.com/yclw/go-vtracer
-          go generate github.com/yclw/go-vtracer
           ```
           
-          动态库将自动下载到 `lib/` 目录。
+          That's it! All dynamic libraries are included in the package.
           
-          ### 📋 更新内容
+          ### 📋 What's New
           
-          - 支持所有主要平台的预编译动态库
-          - 自动安装和配置
-          - 修复兼容性问题
+          - Precompiled dynamic libraries for all major platforms
+          - Zero installation steps required
+          - Out-of-the-box experience
+          - Fixed compatibility issues
         files: release-assets/*
         draft: false
         prerelease: false
