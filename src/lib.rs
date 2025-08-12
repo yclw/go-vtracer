@@ -83,25 +83,25 @@ pub extern "C" fn vtracer_convert_file(
     config: *const VtracerConfig,
 ) -> c_int {
     if input_path.is_null() || output_path.is_null() || config.is_null() {
-        return -1; // 无效参数
+        return -1; // Invalid parameters
     }
 
     unsafe {
         let input_str = match CStr::from_ptr(input_path).to_str() {
             Ok(s) => s,
-            Err(_) => return -2, // 无效输入路径
+            Err(_) => return -2, // Invalid input path
         };
 
         let output_str = match CStr::from_ptr(output_path).to_str() {
             Ok(s) => s,
-            Err(_) => return -3, // 无效输出路径
+            Err(_) => return -3, // Invalid output path
         };
 
         let rust_config = Config::from(*config);
 
         match convert_image_to_svg(Path::new(input_str), Path::new(output_str), rust_config) {
             Ok(_) => 0,
-            Err(_) => -4, // 转换失败
+            Err(_) => -4, // Conversion failed
         }
     }
 }
@@ -116,17 +116,17 @@ pub extern "C" fn vtracer_convert_bytes(
     output: *mut *mut c_char,
 ) -> c_int {
     if image_data.is_null() || config.is_null() || output.is_null() {
-        return -1; // 无效参数
+        return -1; // Invalid parameters
     }
 
     unsafe {
-        // 检查数据长度
+        // Check data length
         if image_len != width * height * 4 {
-            return -2; // 数据长度错误
+            return -2; // Data length error
         }
 
         let bytes = std::slice::from_raw_parts(image_data, image_len);
-        // ColorImage 期望 RGBA 字节数组，所以直接使用原始数据
+        // ColorImage expects RGBA byte array, so use raw data directly
         let pixels = bytes.to_vec();
 
         let color_image = ColorImage { pixels, width, height };
@@ -140,10 +140,10 @@ pub extern "C" fn vtracer_convert_bytes(
                         *output = c_string.into_raw();
                         0
                     }
-                    Err(_) => -3, // 字符串转换失败
+                    Err(_) => -3, // String conversion failed
                 }
             }
-            Err(_) => -4, // 图像转换失败
+            Err(_) => -4, // Image conversion failed
         }
     }
 }
